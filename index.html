@@ -48,10 +48,10 @@ const P=[
 {id:'hydrilla',name:'水蘊草',type:'sub',xa:.50,ya:.72,xb:.22,yb:.58,root:'長在水底的泥土裡',leaf:'3～8 片葉輪生在莖上，整株沉在水面下',flower:'繁殖期花柄會挺出水面',feat:['莖和葉很柔軟，會隨水流擺動','水位改變時，莖會伸展或彎曲'],task:'比較水位高、低時，水蘊草的莖為什麼仍留在水中？',act:'below'},
 {id:'eelgrass',name:'苦草',type:'sub',xa:.54,ya:.77,xb:.39,yb:.64,root:'長在水底的泥土裡',leaf:'葉片細長像緞帶，從水底一叢叢長出來',flower:'不明顯',feat:['葉片柔軟，會隨水流飄動','整株生活在水中'],task:'比較苦草和水蘊草的葉子形狀有什麼不同。',act:'below',note:'課本未附苦草獨立實景照，本圖為課本水下情境示意。'},
 {id:'lily',name:'睡蓮',type:'flo',xa:.34,ya:.57,xb:.54,yb:.46,root:'根和地下塊莖長在水底的泥土裡',leaf:'圓形、有一道缺口，平貼在水面',flower:'花挺出水面',feat:['葉柄長又柔軟，會隨水位伸展或彎曲','天氣冷時會落葉休眠'],task:'潛入水下，沿著葉柄找到睡蓮的根。',act:'below'},
-{id:'nuphar',name:'臺灣萍蓬草',type:'flo',xa:.72,ya:.59,xb:.63,yb:.34,root:'根和地下莖長在水底的泥土裡',leaf:'長橢圓形，浮貼在水面',flower:'黃色杯狀，挺出水面',feat:['臺灣特有種','黃色「花瓣」其實是 4～6 枚萼片'],task:'萍蓬草和睡蓮哪裡相同？哪裡不一樣？',act:'below'},
+{id:'nuphar',name:'臺灣萍蓬草',type:'flo',xa:.97,ya:.64,xb:.63,yb:.34,root:'根和地下莖長在水底的泥土裡',leaf:'長橢圓形，浮貼在水面',flower:'黃色杯狀，挺出水面',feat:['臺灣特有種','黃色「花瓣」其實是 4～6 枚萼片'],task:'萍蓬草和睡蓮哪裡相同？哪裡不一樣？',act:'below'},
 {id:'lotus',name:'荷花',type:'eme',xa:.07,ya:.52,xb:.84,yb:.50,root:'根和地下莖（蓮藕）長在水底的泥土裡',leaf:'又大又圓，挺出水面',flower:'粉紅或白色，挺出水面',feat:['葉面不容易沾水','葉柄和蓮藕有中空孔洞，可儲存空氣'],task:'潛入水下，找找看泥土中的蓮藕。',act:'below'},
 {id:'cattail',name:'香蒲',type:'eme',xa:.93,ya:.42,xb:.97,yb:.38,root:'地下莖長在水底的泥土裡',leaf:'細長像線，挺出水面',flower:'紅褐色圓筒形花穗，像水蠟燭',feat:['葉子又長又直，高高挺出水面'],task:'在全景中找出像熱狗的咖啡色花穗。',act:'above'},
-{id:'hyacinth',name:'布袋蓮',type:'fre',xa:.97,ya:.64,xb:.08,yb:.18,root:'鬚根垂在水中，沒有固定在泥土裡',leaf:'卵形或近圓形，葉柄膨大像囊袋',flower:'淡紫色',feat:['膨大葉柄可儲存空氣，幫助漂浮','繁殖力強，需適當管理'],task:'潛入水下，看看布袋蓮的根有沒有碰到泥土。',act:'below'},
+{id:'hyacinth',name:'布袋蓮',type:'fre',xa:.22,ya:.64,xb:.08,yb:.18,root:'鬚根垂在水中，沒有固定在泥土裡',leaf:'卵形或近圓形，葉柄膨大像囊袋',flower:'淡紫色',feat:['膨大葉柄可儲存空氣，幫助漂浮','繁殖力強，需適當管理'],task:'潛入水下，看看布袋蓮的根有沒有碰到泥土。',act:'below'},
 {id:'lettuce',name:'大萍',type:'fre',xa:.84,ya:.80,xb:.72,yb:.18,root:'細根垂在水中，沒有固定在泥土裡',leaf:'葉片一簇簇像一朵花，葉面有細毛',flower:'很小，不容易看到',feat:['葉面細毛能幫助漂浮','走莖可以長出小苗'],task:'觀察大萍之間相連的細走莖。',act:'above'},
 {id:'duckweed',name:'浮萍',type:'fre',xa:.69,ya:.68,xb:.28,yb:.15,root:'每片背面垂著 1 條絲狀根',leaf:'小葉狀體 2～4 片連在一起',flower:'很少看到',feat:['植物體非常小，常一大片鋪滿水面','會隨風和水流漂動'],task:'潛入水下，找找每片浮萍下方的小根。',act:'below'}];
 const byId=Object.fromEntries(P.map(p=>[p.id,p]));let view='above',mode='explore',lon=-58,lat=-10,zoom=1,drag=false,lastX=0,lastY=0,spin=false,cal=false,current=null;const done=new Set(),attempts={};let mystery=[];
