@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>池塘水生植物觀察站</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F6EE; --paper-2:#E7ECDF; --ink:#1E2B25; --muted:#56665D; --line:#C9D3C3;
+    --pond:#2F6B5E; --pond-deep:#123A34;
+    --sub:#2B7FA3; --eme:#C9466F; --flo:#C98E12; --fre:#4F9A2C;
+    --display:"LXGW WenKai TC","Noto Sans TC","Microsoft JhengHei","PingFang TC",serif;
+    --body:"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif;
+  }
+  html,body{height:100%;margin:0;overflow:hidden;background:var(--pond-deep);color:var(--ink);font-family:var(--body);}
+  *{box-sizing:border-box}
+  button{font:inherit;color:inherit}
+  button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #FFD35A;outline-offset:2px}
+
+  #app{position:fixed;inset:0;user-select:none;-webkit-user-select:none}
+  #stage{position:absolute;inset:0;cursor:grab;touch-action:none}
+  #stage.drag{cursor:grabbing}
+  #veil{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .8s;
+    background:radial-gradient(ellipse at 50% 30%, rgba(120,200,190,0) 35%, rgba(6,40,38,.55) 100%)}
+  #veil.on{opacity:1}
+  #pins{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+
+  .panel{background:rgba(244,246,238,.94);border:1px solid rgba(30,43,37,.12);border-radius:12px;box-shadow:0 6px 24px rgba(8,30,26,.25);backdrop-filter:blur(6px)}
+
+  /* top */
+  #top{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;pointer-events:none;flex-wrap:wrap}
+  #top > *{pointer-events:auto}
+  #brand{padding:10px 16px 11px}
+  #brand .eyebrow{font-size:12px;letter-spacing:.12em;color:var(--muted)}
+  #brand h1{font-family:var(--display);font-weight:700;font-size:24px;margin:2px 0 0;line-height:1.2;text-wrap:balance}
+  #modebox{display:flex;align-items:center;gap:10px;padding:6px;flex-wrap:wrap;justify-content:flex-end}
+  .seg{display:inline-flex;background:var(--paper-2);border-radius:999px;padding:3px;gap:2px}
+  .seg button{border:0;background:transparent;padding:7px 16px;border-radius:999px;cursor:pointer;font-weight:500;font-size:15px;color:var(--muted)}
+  .seg button[aria-pressed="true"]{background:var(--pond);color:#fff}
+  #score{font-size:14px;font-weight:700;padding:0 10px 0 4px;font-variant-numeric:tabular-nums}
+
+  /* legend */
+  #legend{position:absolute;left:16px;top:calc(96px + env(safe-area-inset-top,0px));width:272px;max-height:calc(100% - 210px);overflow:auto}
+  #legend summary{list-style:none;cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:700;font-size:18px;display:flex;justify-content:space-between;align-items:center}
+  #legend summary::-webkit-details-marker{display:none}
+  #legend summary .chev{font-family:var(--body);font-size:13px;color:var(--muted);font-weight:400}
+  #legend[open] summary .chev::after{content:"收合"}
+  #legend:not([open]) summary .chev::after{content:"展開"}
+  .types{display:flex;flex-direction:column;gap:2px;padding:0 10px 10px}
+  .type{display:grid;grid-template-columns:76px 1fr;gap:10px;align-items:center;padding:8px 6px;border-top:1px solid var(--line)}
+  .type svg{width:76px;height:56px;display:block;border-radius:6px}
+  .type h3{margin:0;font-family:var(--display);font-size:17px;color:var(--c);display:flex;align-items:center;gap:6px}
+  .type h3::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
+  .type p{margin:2px 0 4px;font-size:13px;line-height:1.45;color:var(--ink)}
+  .chips{display:flex;flex-wrap:wrap;gap:4px}
+  .chip{border:1px solid var(--c);color:var(--ink);background:#fff;border-radius:999px;padding:1px 9px;font-size:13px;cursor:pointer}
+  .chip:hover{background:var(--c);color:#fff}
+  .chips .locked{font-size:12px;color:var(--muted)}
+  .tryit{margin:4px 10px 12px;padding:10px 12px;background:var(--paper-2);border-radius:8px;font-size:13px;line-height:1.55}
+  .tryit b{font-family:var(--display);font-size:15px}
+
+  /* bottom bar */
+  #bar{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));display:flex;align-items:center;gap:14px;padding:8px 12px;flex-wrap:wrap;justify-content:center;max-width:calc(100% - 32px)}
+  #lvlwrap{display:flex;align-items:center;gap:8px;font-size:14px}
+  #lvlwrap label{font-weight:700;white-space:nowrap}
+  #lvl{width:150px;accent-color:var(--pond)}
+  #lvlout{min-width:72px;font-variant-numeric:tabular-nums;color:var(--muted)}
+  .btn{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;cursor:pointer;font-size:14px}
+  .btn[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+  #hint{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));background:rgba(18,58,52,.82);color:#fff;padding:8px 16px;border-radius:999px;font-size:14px;pointer-events:none;transition:opacity .6s;white-space:nowrap;max-width:calc(100% - 32px);overflow:hidden;text-overflow:ellipsis}
+  #hint.gone{opacity:0}
+
+  /* pins */
+  .pin{position:absolute;left:0;top:0;display:flex;flex-direction:column;align-items:center;border:0;background:none;padding:0;cursor:pointer;pointer-events:auto;will-change:transform}
+  .pin .tag{background:var(--paper);border:2px solid var(--c);border-radius:999px;padding:3px 11px;font-size:15px;font-weight:700;white-space:nowrap;box-shadow:0 3px 10px rgba(0,0,0,.28);transition:transform .15s}
+  .pin:hover .tag,.pin:focus-visible .tag{transform:scale(1.08)}
+  .pin .tag small{font-weight:500;color:var(--c);margin-left:4px;font-size:12px}
+  .pin .stick{width:2px;height:16px;background:rgba(255,255,255,.9)}
+  .pin .dot{width:13px;height:13px;border-radius:50%;background:var(--c);border:2px solid #fff;position:relative}
+  .pin .dot::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:2px solid var(--c);animation:ring 2.2s ease-out infinite}
+  .pin.active .tag{background:var(--c);color:#fff}
+  .pin.active .tag small{color:#fff}
+  @keyframes ring{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.8);opacity:0}}
+
+  /* card */
+  #card{position:absolute;right:16px;top:calc(96px + env(safe-area-inset-top,0px));width:360px;max-height:calc(100% - 200px);overflow:auto;padding:0}
+  #card .head{padding:16px 18px 12px;border-bottom:1px solid var(--line);position:relative}
+  #card .kind{display:inline-block;background:var(--c);color:#fff;border-radius:999px;padding:2px 10px;font-size:13px;font-weight:700}
+  #card h2{font-family:var(--display);font-size:28px;margin:6px 0 0;line-height:1.2}
+  #card .close{position:absolute;right:10px;top:10px;border:0;background:var(--paper-2);width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:18px;line-height:1}
+  #card .body{padding:12px 18px 18px;display:flex;flex-direction:column;gap:12px}
+  .where{display:grid;grid-template-columns:auto 1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+  .where dt{padding:8px 10px;background:var(--paper-2);font-family:var(--display);font-weight:700;font-size:16px;border-top:1px solid var(--line)}
+  .where dd{margin:0;padding:8px 12px;font-size:14px;line-height:1.5;border-top:1px solid var(--line)}
+  .where dt:first-of-type,.where dd:first-of-type{border-top:0}
+  #card h4{margin:0 0 4px;font-size:14px;color:var(--muted);font-weight:700;letter-spacing:.05em}
+  #card ul{margin:0;padding-left:1.2em;font-size:14px;line-height:1.6}
+  .task{background:#FFF6D8;border:1px dashed #D9B44A;border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.55}
+  .task b{font-family:var(--display)}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .actions .btn.primary{background:var(--pond);color:#fff;border-color:var(--pond)}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .opt{border:2px solid var(--c);background:#fff;border-radius:10px;padding:10px 8px;cursor:pointer;font-family:var(--display);font-size:18px;font-weight:700;color:var(--ink)}
+  .opt:hover{background:var(--c);color:#fff}
+  .opt[disabled]{opacity:.35;cursor:not-allowed;background:#fff;color:var(--ink)}
+  .fb{border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.55}
+  .fb.no{background:#FDECEC;border:1px solid #E7A5A5}
+  .fb.yes{background:#E6F4DD;border:1px solid #9CCB83}
+  .q{font-size:15px;line-height:1.55;margin:0}
+  table.recap{width:100%;border-collapse:collapse;font-size:14px}
+  table.recap td{padding:5px 4px;border-top:1px solid var(--line)}
+  table.recap td:last-child{text-align:right;font-weight:700}
+
+  @media (max-width: 760px){
+    #brand h1{font-size:19px}
+    #brand{padding:8px 12px}
+    #legend{top:calc(128px + env(safe-area-inset-top,0px));width:auto;right:16px;max-height:52%}
+    #bar{gap:8px}
+    #hint{display:none}
+    #card{left:16px;right:16px;width:auto;top:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-height:62%;z-index:5}
+    #lvl{width:110px}
+  }
+  @media (prefers-reduced-motion: reduce){ .pin .dot::after{animation:none} }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div id="stage" aria-label="360 度池塘場景，拖曳可以環顧四周"></div>
+  <div id="veil"></div>
+  <div id="pins"></div>
+
+  <div id="top">
+    <div id="brand" class="panel">
+      <div class="eyebrow">四上自然 ・ 單元二 水生生物與環境</div>
+      <h1>池塘水生植物觀察站</h1>
+    </div>
+    <div id="modebox" class="panel">
+      <span id="score" hidden></span>
+      <div class="seg" role="group" aria-label="模式">
+        <button id="mExplore" aria-pressed="true">探索</button>
+        <button id="mChallenge" aria-pressed="false">分類挑戰</button>
+      </div>
+    </div>
+  </div>
+
+  <details id="legend" class="panel" open>
+    <summary>四類水生植物 <span class="chev"></span></summary>
+    <div class="types" id="types"></div>
+    <div class="tryit"><b>動手試試看</b><br>拖動下方「水位」，觀察：水變深或變淺時，<b>睡蓮的葉子</b>還貼在水面嗎？<b>水蘊草</b>的莖又會怎樣？</div>
+  </details>
+
+  <aside id="card" class="panel" hidden aria-live="polite"></aside>
+
+  <div id="hint">拖曳畫面環顧四周・滾輪或雙指縮放・點選圖釘認識植物</div>
+
+  <div id="bar" class="panel">
+    <div class="seg" role="group" aria-label="視角">
+      <button id="vAbove" aria-pressed="true">水面上</button>
+      <button id="vBelow" aria-pressed="false">潛入水下</button>
+    </div>
+    <div id="lvlwrap">
+      <label for="lvl">水位</label>
+      <input type="range" id="lvl" min="-100" max="80" step="5" value="0">
+      <output id="lvlout" for="lvl">平常</output>
+    </div>
+    <button class="btn" id="spin" aria-pressed="false">自動環顧</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function(){
+"use strict";
+const V3 = THREE.Vector3;
+
+/* ---------------- 教學資料 ---------------- */
+const TYPES = {
+  sub:{name:'沉水性', color:'#2B7FA3', line:'整株沉在水面下，根長在水底泥土裡。',
+       root:'長在水底的泥土裡', body:'莖和葉整株沉在水面下'},
+  eme:{name:'挺水性', color:'#C9466F', line:'根長在水底泥土裡，葉和花挺出水面。',
+       root:'長在水底的泥土裡', body:'葉和花挺出水面'},
+  flo:{name:'浮葉性', color:'#C98E12', line:'根長在水底泥土裡，葉平貼在水面。',
+       root:'長在水底的泥土裡', body:'葉平貼在水面，花挺出水面'},
+  fre:{name:'漂浮性', color:'#4F9A2C', line:'根沒有固定在泥土裡，整株浮在水面。',
+       root:'垂在水中，沒有固定在泥土裡', body:'整株浮在水面，會隨水漂動'}
+};
+const TYPE_ORDER = ['sub','eme','flo','fre'];
+
+const PLANTS = [
+  {id:'hydrilla', name:'水蘊草', type:'sub',
+    root:'長在水底的泥土裡', leaf:'3～8 片葉輪生在莖上，細長像線，整株沉在水面下', flower:'繁殖期花柄會挺出水面',
+    feat:['莖和葉很柔軟，會隨水流擺動','水位改變時，莖會伸展或彎曲，適應水域環境'],
+    task:'把「水位」往左調低，看看水蘊草的莖會怎樣？', act:'below'},
+  {id:'eelgrass', name:'苦草', type:'sub',
+    root:'長在水底的泥土裡', leaf:'葉片細長像緞帶，從水底一叢叢長出來', flower:'不明顯',
+    feat:['葉片柔軟，隨水流飄動','和水蘊草一樣，整株生活在水中'],
+    task:'潛入水下，比較苦草和水蘊草的葉子形狀有什麼不同。', act:'below'},
+  {id:'lily', name:'睡蓮', type:'flo',
+    root:'根和地下塊莖長在水底的泥土裡', leaf:'圓形、有一道缺口，平貼在水面', flower:'花挺出水面',
+    feat:['葉柄長又柔軟，會隨水位伸展或彎曲，讓葉面一直平貼水面，爭取陽光','天氣較冷的冬季會落葉休眠'],
+    task:'拖動「水位」，睡蓮的葉子會沉下去嗎？潛入水下看看它的葉柄。', act:'level'},
+  {id:'nuphar', name:'臺灣萍蓬草', type:'flo',
+    root:'根和地下莖長在水底的泥土裡', leaf:'長橢圓形，浮貼在水面', flower:'黃色的「花瓣」其實是 4～6 枚萼片，挺出水面',
+    feat:['臺灣特有種','真正的花瓣已經退化了'],
+    task:'萍蓬草和睡蓮有哪裡相同？哪裡不一樣？', act:'below'},
+  {id:'lotus', name:'荷花', type:'eme',
+    root:'根和地下莖（蓮藕）長在水底的泥土裡', leaf:'又大又圓，挺出水面', flower:'粉紅或白色，挺出水面；種子就是蓮子',
+    feat:['葉面不容易沾水，水滴會滾成水珠','葉柄和蓮藕有許多中空的孔洞，可以儲存空氣','剛長出的葉子浮在水面，長大後才挺出水面'],
+    task:'潛入水下，找找看泥土上的蓮藕在哪裡？', act:'below'},
+  {id:'cattail', name:'香蒲', type:'eme',
+    root:'地下莖長在水底的泥土裡', leaf:'細長像線，挺出水面', flower:'紅褐色、圓筒形的花穗，像一根蠟燭，所以又叫「水蠟燭」',
+    feat:['葉子又長又直，高高挺出水面'],
+    task:'找找看像熱狗一樣的咖啡色花穗。', act:'above'},
+  {id:'hyacinth', name:'布袋蓮', type:'fre',
+    root:'鬚根垂在水中，沒有固定在泥土裡', leaf:'卵形或接近圓形，葉柄膨大像一個囊袋', flower:'淡紫色，花瓣 3 片',
+    feat:['葉柄裡有許多孔洞可以儲存空氣，擠壓會冒出氣泡，幫助它浮在水面','繁殖力超強，若不管理會蓋滿整個水面，造成水質優養化'],
+    task:'潛入水下，看看布袋蓮的根有碰到泥土嗎？', act:'below'},
+  {id:'lettuce', name:'大萍', type:'fre',
+    root:'細細的根垂在水中，沒有固定在泥土裡', leaf:'葉片一簇簇長在一起，像一朵花；葉面有細毛', flower:'很小，不容易看到',
+    feat:['葉面的細毛能幫助它浮在水面','有走莖，每條走莖都能長出一株小苗'],
+    task:'找找看，大萍和大萍之間連著的細莖（走莖）。', act:'above'},
+  {id:'duckweed', name:'浮萍', type:'fre',
+    root:'每片背面垂著 1 條絲狀的根，漂在水中', leaf:'卵形或橢圓形的小葉狀體，2～4 片連在一起', flower:'很少看到',
+    feat:['植物體非常小，常常一大片鋪滿水面','會隨著風和水流漂動'],
+    task:'浮萍雖然小小一片，也是一株完整的植物喔！潛入水下看看它的根。', act:'below'}
+];
+const byId = Object.fromEntries(PLANTS.map(p=>[p.id,p]));
+
+/* ---------------- 工具 ---------------- */
+let seed = 20260922;
+function rnd(){ seed|=0; seed=seed+0x6D2B79F5|0; let t=Math.imul(seed^seed>>>15,1|seed); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }
+const R = (a,b)=>a+(b-a)*rnd();
+const MUD = -2.6, SHORE = 1.2;
+function bottomY(x,z){ const r=Math.hypot(x,z); return r>=30 ? SHORE : MUD + Math.pow(r/30,3)*(SHORE-MUD); }
+function polar(deg,d){ const a=deg*Math.PI/180; return new V3(Math.sin(a)*d,0,-Math.cos(a)*d); }
+function mat(color,o){ return new THREE.MeshStandardMaterial(Object.assign({color,roughness:.85,metalness:0},o||{})); }
+const DS = THREE.DoubleSide;
+
+const W = { level:0, under:false };
+
+/* ---------------- 場景 ---------------- */
+const stage = document.getElementById('stage');
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+renderer.setSize(stage.clientWidth, stage.clientHeight);
+stage.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const SKYFOG = new THREE.Color(0xdcebe2), UNDERFOG = new THREE.Color(0x1f5a52);
+scene.fog = new THREE.Fog(SKYFOG.clone(), 45, 260);
+renderer.setClearColor(SKYFOG);
+
+const camera = new THREE.PerspectiveCamera(70, stage.clientWidth/stage.clientHeight, 0.05, 700);
+const EYE_ABOVE = 2.45, CAM_X = 0, CAM_Z = 0.9;
+camera.position.set(CAM_X, EYE_ABOVE, CAM_Z);
+
+scene.add(new THREE.HemisphereLight(0xd6ecff, 0x4b5a3a, 0.95));
+const sun = new THREE.DirectionalLight(0xfff3dc, 0.85); sun.position.set(30,50,-20); scene.add(sun);
+
+// 天空
+const sky = new THREE.Mesh(new THREE.SphereGeometry(500,32,16), new THREE.ShaderMaterial({
+  side:THREE.BackSide, depthWrite:false, fog:false,
+  uniforms:{top:{value:new THREE.Color(0x6fa9d6)}, mid:{value:new THREE.Color(0xbfdbe8)}, bot:{value:new THREE.Color(0xdcebe2)}},
+  vertexShader:'varying vec3 vP; void main(){ vP=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+  fragmentShader:'uniform vec3 top; uniform vec3 mid; uniform vec3 bot; varying vec3 vP; void main(){ float h=normalize(vP).y; vec3 c = h>0.0 ? mix(mid, top, smoothstep(0.0,0.6,h)) : bot; c = mix(bot, c, smoothstep(-0.02,0.08,h)); gl_FragColor=vec4(c,1.0);}'
+}));
+scene.add(sky);
+// 雲
+const cloudMat = new THREE.MeshBasicMaterial({color:0xffffff, fog:false, transparent:true, opacity:.92});
+for(let i=0;i<9;i++){
+  const g=new THREE.Group(), a=R(0,Math.PI*2), d=R(300,380);
+  g.position.set(Math.sin(a)*d, R(90,150), Math.cos(a)*d);
+  for(let k=0;k<5;k++){ const s=new THREE.Mesh(new THREE.SphereGeometry(R(14,24),10,8), cloudMat); s.position.set(R(-30,30),R(-4,6),R(-10,10)); s.scale.y=.55; g.add(s); }
+  g.lookAt(0,g.position.y,0); scene.add(g);
+}
+// 遠山
+const hillMat = new THREE.MeshLambertMaterial({color:0x5d7f5a});
+for(let i=0;i<16;i++){
+  const a=i/16*Math.PI*2+R(0,.3), d=R(170,230), r=R(40,70);
+  const h=new THREE.Mesh(new THREE.SphereGeometry(r,16,10), hillMat);
+  h.position.set(Math.sin(a)*d, -r*0.55, Math.cos(a)*d); h.scale.y=R(.5,.8); scene.add(h);
+}
+// 池底 + 岸
+{
+  const g = new THREE.RingGeometry(0.01, 34, 128, 42); g.rotateX(-Math.PI/2);
+  const pos=g.attributes.position, col=[];
+  const cMud=new THREE.Color(0x5b4730), cBank=new THREE.Color(0x7a6a44), cGrass=new THREE.Color(0x6f8f46), c=new THREE.Color();
+  for(let i=0;i<pos.count;i++){
+    const x=pos.getX(i), z=pos.getZ(i), r=Math.hypot(x,z);
+    let y = r<30 ? bottomY(x,z) : SHORE + (r-30)*0.02;
+    y += (Math.sin(x*1.7)*Math.cos(z*1.3))*0.05;
+    pos.setY(i,y);
+    if(y<-0.3) c.copy(cMud).lerp(cBank, Math.max(0,(y+2.6)/2.3)*0.5);
+    else if(y<0.95) c.copy(cBank);
+    else c.copy(cGrass);
+    col.push(c.r,c.g,c.b);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col,3)); g.computeVertexNormals();
+  scene.add(new THREE.Mesh(g, new THREE.MeshLambertMaterial({vertexColors:true})));
+  const s = new THREE.RingGeometry(33.6, 300, 96, 10); s.rotateX(-Math.PI/2);
+  const sp=s.attributes.position;
+  for(let i=0;i<sp.count;i++){ const x=sp.getX(i), z=sp.getZ(i), r=Math.hypot(x,z); sp.setY(i, SHORE+0.08+(r>60? Math.sin(x*.05)*Math.cos(z*.04)*3*(r-60)/240:0)); }
+  s.computeVertexNormals();
+  scene.add(new THREE.Mesh(s, new THREE.MeshLambertMaterial({color:0x6f8f46})));
+  // 池底石頭
+  const rockMat=mat(0x6b6a5f);
+  for(let i=0;i<40;i++){ const a=R(0,Math.PI*2), d=R(2,29), x=Math.sin(a)*d, z=Math.cos(a)*d;
+    const m=new THREE.Mesh(new THREE.DodecahedronGeometry(R(.1,.35),0), rockMat); m.position.set(x,bottomY(x,z),z); m.scale.y=.6; scene.add(m); }
+}
+// 樹
+{
+  const trunk=mat(0x6a4c33), leafs=[mat(0x3f6e38,{flatShading:true}),mat(0x4f7f3c,{flatShading:true}),mat(0x2f5a33,{flatShading:true})];
+  for(let i=0;i<52;i++){
+    let a=R(0,360); if(a>166&&a<194) a+=30;
+    const p=polar(a,R(35,60));
+    const t=new THREE.Group(); t.position.set(p.x,SHORE,p.z);
+    const h=R(2.5,4.5);
+    const tr=new THREE.Mesh(new THREE.CylinderGeometry(.14,.22,h,6),trunk); tr.position.y=h/2; t.add(tr);
+    for(let k=0;k<3;k++){ const c=new THREE.Mesh(new THREE.IcosahedronGeometry(R(1.3,2.3),0),leafs[k%3]); c.position.set(R(-.8,.8),h+R(0,1.6),R(-.8,.8)); t.add(c); }
+    scene.add(t);
+  }
+  const bush=mat(0x4d7a3a,{flatShading:true});
+  for(let i=0;i<40;i++){ const p=polar(R(0,360),R(31.5,34)); const b=new THREE.Mesh(new THREE.IcosahedronGeometry(R(.5,1.1),0),bush); b.position.set(p.x,SHORE+.2,p.z); b.scale.y=.7; scene.add(b); }
+}
+// 木棧道
+{
+  const deckY=1.25, planks=[], n=Math.floor((31-0.2)/0.3);
+  const pm=new THREE.InstancedMesh(new THREE.BoxGeometry(1.8,.08,.26), mat(0x8a6a48), n);
+  const d=new THREE.Object3D(), c=new THREE.Color();
+  for(let i=0;i<n;i++){ d.position.set(0,deckY,0.2+i*0.3); d.rotation.y=R(-.01,.01); d.updateMatrix(); pm.setMatrixAt(i,d.matrix);
+    c.setHSL(0.08, .3, R(.33,.45)); pm.setColorAt(i,c); planks.push(i); }
+  scene.add(pm);
+  const post=mat(0x5a4330);
+  for(let z=0.35; z<31; z+=2.8){ for(const x of [-.85,.85]){ const by=bottomY(x,z); const h=deckY-by+.1;
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(.07,.08,h,8),post); m.position.set(x,by+h/2-.05,z); scene.add(m); } }
+  const rail=mat(0x6d5238);
+  for(const x of [-.86,.86]){ const m=new THREE.Mesh(new THREE.BoxGeometry(.07,.07,30),rail); m.position.set(x,deckY+.75,16.3); scene.add(m);
+    for(let z=1.8; z<31; z+=2.8){ const p=new THREE.Mesh(new THREE.BoxGeometry(.07,.8,.07),rail); p.position.set(x,deckY+.38,z); scene.add(p);} }
+}
+// 水面
+const waterTex = (function(){
+  const cv=document.createElement('canvas'); cv.width=cv.height=256; const x=cv.getContext('2d');
+  x.fillStyle='#808080'; x.fillRect(0,0,256,256);
+  for(let i=0;i<900;i++){ const g=Math.floor(R(90,170)); x.fillStyle='rgba('+g+','+g+','+g+',.35)'; x.beginPath(); x.ellipse(R(0,256),R(0,256),R(4,18),R(2,6),R(0,3),0,Math.PI*2); x.fill(); }
+  const t=new THREE.CanvasTexture(cv); t.wrapS=t.wrapT=THREE.RepeatWrapping; t.repeat.set(14,14); return t;
+})();
+const waterMat = new THREE.MeshPhongMaterial({color:0x3f7f76, specular:0xb8d8d0, shininess:90, transparent:true, opacity:.6, side:DS, depthWrite:false, bumpMap:waterTex, bumpScale:.03});
+const water = new THREE.Mesh(new THREE.CircleGeometry(31.2,128), waterMat); water.geometry.rotateX(-Math.PI/2); water.renderOrder=2; scene.add(water);
+
+// 水中懸浮微粒
+const motes = (function(){ const n=500, a=new Float32Array(n*3); for(let i=0;i<n;i++){ a[i*3]=R(-12,12); a[i*3+1]=R(-2.5,0); a[i*3+2]=R(-12,12);} const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.BufferAttribute(a,3));
+  const p=new THREE.Points(g,new THREE.PointsMaterial({color:0xcfeee6,size:.035,transparent:true,opacity:.7})); p.visible=false; scene.add(p); return p; })();
+
+/* ---------------- 植物 ---------------- */
+const anchors = {};         // id -> {c:V3, above(lvl), below(lvl)}
+const petioles = [];        // 浮葉性葉柄（隨水位重建）
+const floaters = [];        // 漂浮性群組（跟著水面）
+const swayers = [];         // 沉水性莖（可彎曲）
+const ribbons = [];         // 苦草葉片（頂點擺動）
+const surfaceObjs = [];     // 浮葉性葉片/花（y = 水位 + lift）
+
+function addPetiole(root, top, lift, matl, radius){
+  const p={R:root, x:top.x, z:top.z, lift, L:(0-root.y)*1.3+lift+.25, r:radius||.016,
+    dir:new V3(R(-1,1),0,R(-1,1)).normalize(), mesh:new THREE.Mesh(new THREE.BufferGeometry(), matl)};
+  scene.add(p.mesh); petioles.push(p); return p;
+}
+function updatePetiole(p){
+  const T=new V3(p.x, W.level+p.lift, p.z);
+  const dist=p.R.distanceTo(T), slack=Math.max(0,p.L-dist);
+  const mid=p.R.clone().lerp(T,.5).addScaledVector(p.dir, slack*.55+.04);
+  const pts=[p.R.clone(), p.R.clone().add(new V3(0,.18,0)), mid, T.clone().add(new V3(0,-.14,0)), T];
+  p.mesh.geometry.dispose();
+  p.mesh.geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 22, p.r, 5, false);
+}
+
+// 睡蓮
+function buildLily(){
+  const c=polar(0,7.2); const padMats=[mat(0x3d7a30,{side:DS}),mat(0x497f2f,{side:DS}),mat(0x356b2e,{side:DS})];
+  const petMat=mat(0x6e7a3a,{roughness:.9}), pMat=[mat(0xf7f1ec,{side:DS}), mat(0xf2b5c8,{side:DS})], core=mat(0xf0c338);
+  for(let i=0;i<13;i++){
+    const a=R(0,Math.PI*2), d=Math.sqrt(rnd())*2.4, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d, r=R(.32,.55);
+    const g=new THREE.CircleGeometry(r,28,.2,Math.PI*2-.42); g.rotateX(-Math.PI/2);
+    const pad=new THREE.Mesh(g,padMats[i%3]); pad.position.set(x,0,z); pad.rotation.y=R(0,6.28); scene.add(pad);
+    surfaceObjs.push({o:pad,lift:.012});
+    const rt=new V3(x+R(-.4,.4), bottomY(x,z), z+R(-.4,.4));
+    addPetiole(rt, new V3(x,0,z), .005, petMat);
+  }
+  for(let f=0;f<3;f++){
+    const a=R(0,6.28), d=R(.4,1.8), x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d;
+    const fl=new THREE.Group(); fl.position.set(x,0,z);
+    const pm=pMat[f===1?1:0];
+    for(let layer=0;layer<2;layer++) for(let k=0;k<10;k++){
+      const pv=new THREE.Group(); pv.rotation.y=k/10*Math.PI*2+layer*.3;
+      const pg=new THREE.SphereGeometry(1,10,6); pg.scale(.045,.015,.15); pg.translate(0,0,.13);
+      const m=new THREE.Mesh(pg,pm); m.rotation.x=-(layer?0.9:0.45); pv.add(m); fl.add(pv);
+    }
+    const cm=new THREE.Mesh(new THREE.SphereGeometry(.05,10,8),core); cm.position.y=.04; fl.add(cm);
+    scene.add(fl); surfaceObjs.push({o:fl,lift:.14});
+    addPetiole(new V3(x+R(-.3,.3), bottomY(x,z), z+R(-.3,.3)), new V3(x,0,z), .1, petMat, .02);
+  }
+  // 地下塊莖
+  const tub=mat(0x5a4632); for(let i=0;i<4;i++){ const a=R(0,6.28), d=R(0,1.5), x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d;
+    const m=new THREE.Mesh(new THREE.SphereGeometry(.16,8,6),tub); m.scale.set(1.6,.7,1); m.position.set(x,bottomY(x,z)+.03,z); scene.add(m); }
+  anchors.lily={c, above:l=>l+.35, below:l=>l-1.3};
+}
+// 臺灣萍蓬草
+function buildNuphar(){
+  const c=polar(44,6.4); const padM=mat(0x4f8a2e,{side:DS}), petM=mat(0x7a8a3a), yel=mat(0xf3c32a,{side:DS}), red=mat(0xb8322a);
+  for(let i=0;i<10;i++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*1.8, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d;
+    const g=new THREE.CircleGeometry(.36,26,.22,Math.PI*2-.44); g.scale(.72,1.25,1); g.rotateX(-Math.PI/2);
+    const pad=new THREE.Mesh(g,padM); pad.position.set(x,0,z); pad.rotation.y=R(0,6.28); scene.add(pad);
+    surfaceObjs.push({o:pad,lift:.013});
+    addPetiole(new V3(x+R(-.3,.3), bottomY(x,z), z+R(-.3,.3)), new V3(x,0,z), .005, petM);
+  }
+  for(let f=0;f<4;f++){
+    const a=R(0,6.28), d=R(.3,1.4), x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d;
+    const fl=new THREE.Group(); fl.position.set(x,0,z);
+    for(let k=0;k<5;k++){ const pv=new THREE.Group(); pv.rotation.y=k/5*6.28;
+      const pg=new THREE.SphereGeometry(1,10,8,0,Math.PI*2,0,Math.PI/2); pg.scale(.07,.11,.05); pg.rotateX(Math.PI/2); pg.translate(0,.06,.05);
+      const m=new THREE.Mesh(pg,yel); m.rotation.x=-.25; pv.add(m); fl.add(pv); }
+    const d2=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,.03,12),red); d2.position.y=.1; fl.add(d2);
+    scene.add(fl); surfaceObjs.push({o:fl,lift:.22});
+    addPetiole(new V3(x+R(-.2,.2), bottomY(x,z), z+R(-.2,.2)), new V3(x,0,z), .2, petM, .018);
+  }
+  anchors.nuphar={c, above:l=>l+.45, below:l=>l-1.3};
+}
+// 荷花
+function buildLotus(){
+  const c=polar(84,10); const stalk=mat(0x6f8e3a), leafM=[mat(0x4f8f3d,{side:DS}),mat(0x5a9a44,{side:DS})],
+        pink=mat(0xee8fb2,{side:DS}), pinkL=mat(0xf8c9d8,{side:DS}), pod=mat(0xd8c24a), root=mat(0xd9c3a0);
+  function stem(x,z,h,rad){ const by=bottomY(x,z); const top=new V3(x+R(-.25,.25),h,z+R(-.25,.25));
+    const cv=new THREE.CatmullRomCurve3([new V3(x,by,z), new V3(x+R(-.15,.15),(by+h)/2,z+R(-.15,.15)), top]);
+    scene.add(new THREE.Mesh(new THREE.TubeGeometry(cv,16,rad||.03,6,false),stalk)); return top; }
+  for(let i=0;i<9;i++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*2.6, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d, r=R(.55,.85);
+    const top=stem(x,z,R(1.1,2.3));
+    const pts=[new THREE.Vector2(0.001,0),new THREE.Vector2(r*.3,.03),new THREE.Vector2(r*.7,.12),new THREE.Vector2(r,.26)];
+    const lf=new THREE.Mesh(new THREE.LatheGeometry(pts,24),leafM[i%2]); lf.position.copy(top); lf.rotation.set(R(-.25,.25),0,R(-.25,.25)); scene.add(lf);
+  }
+  for(let f=0;f<3;f++){
+    const a=R(0,6.28), d=R(.3,1.8), x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d;
+    const top=stem(x,z,R(2.0,2.7),.025); const fl=new THREE.Group(); fl.position.copy(top);
+    if(f<2){
+      for(let layer=0;layer<2;layer++) for(let k=0;k<8;k++){ const pv=new THREE.Group(); pv.rotation.y=k/8*6.28+layer*.39;
+        const pg=new THREE.SphereGeometry(1,12,8); pg.scale(.1,.24,.04); pg.translate(0,.22,0);
+        const m=new THREE.Mesh(pg,layer?pinkL:pink); m.position.z=.05; m.rotation.x=layer? .35 : .75; pv.add(m); fl.add(pv); }
+      const pc=new THREE.Mesh(new THREE.CylinderGeometry(.07,.045,.07,14),pod); pc.position.y=.07; fl.add(pc);
+    } else {
+      const pc=new THREE.Mesh(new THREE.CylinderGeometry(.13,.06,.12,16),mat(0x7d9a3e)); pc.position.y=.06; fl.add(pc);
+    }
+    scene.add(fl);
+  }
+  // 蓮藕（地下莖）
+  for(let i=0;i<3;i++){ const a=R(0,6.28), x0=c.x+Math.cos(a)*R(0,1.5), z0=c.z+Math.sin(a)*R(0,1.5), dir=R(0,6.28);
+    for(let s=0;s<3;s++){ const x=x0+Math.cos(dir)*s*.62, z=z0+Math.sin(dir)*s*.62;
+      const m=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),root); m.scale.set(.3,.11,.11); m.rotation.y=-dir; m.position.set(x,bottomY(x,z)+.06,z); scene.add(m);} }
+  anchors.lotus={c, above:()=>2.9, below:()=>-1.6};
+}
+// 香蒲
+function buildCattail(){
+  const c=polar(118,13.5); const blade=mat(0x6c9a42,{side:DS}), blade2=mat(0x7fa84c,{side:DS}), stalk=mat(0x7a9446), spike=mat(0x6b3f22,{roughness:1});
+  for(let i=0;i<46;i++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*2.2, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d, by=bottomY(x,z), L=R(3.4,5.0);
+    const g=new THREE.PlaneGeometry(.07,L,1,10); g.translate(0,L/2,0);
+    const p=g.attributes.position, bend=R(.2,.9); for(let k=0;k<p.count;k++){ const t=p.getY(k)/L; p.setZ(k, t*t*bend); p.setX(k, p.getX(k)*(1-t*.8)); }
+    g.computeVertexNormals();
+    const m=new THREE.Mesh(g,i%2?blade:blade2); m.position.set(x,by,z); m.rotation.y=R(0,6.28); scene.add(m);
+  }
+  for(let i=0;i<9;i++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*1.8, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d, by=bottomY(x,z), H=R(3.6,4.6);
+    const g=new THREE.Group(); g.position.set(x,by,z); g.rotation.set(R(-.05,.05),0,R(-.05,.05));
+    const s=new THREE.Mesh(new THREE.CylinderGeometry(.013,.02,H,5),stalk); s.position.y=H/2; g.add(s);
+    const sp=new THREE.Mesh(new THREE.CylinderGeometry(.06,.06,.45,10),spike); sp.position.y=H-.4; g.add(sp);
+    const tip=new THREE.Mesh(new THREE.CylinderGeometry(.006,.009,.28,4),mat(0x8a7a50)); tip.position.y=H-.03; g.add(tip);
+    scene.add(g);
+  }
+  anchors.cattail={c, above:()=>2.6, below:()=>-1.6};
+}
+// 布袋蓮
+function buildHyacinth(){
+  const c=polar(-38,6.4); const G=new THREE.Group(); G.position.set(c.x,0,c.z); G.scale.setScalar(1.5); scene.add(G);
+  const bulb=mat(0x86b64c,{roughness:.5}), leaf=mat(0x3c8a34,{side:DS,roughness:.35}), rootM=mat(0x3a2c38), flw=mat(0xa987dc), eye=mat(0xf0c338);
+  for(let r=0;r<7;r++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*1.2, ro=new THREE.Group(); ro.position.set(Math.cos(a)*d,0,Math.sin(a)*d); ro.rotation.y=R(0,6.28); G.add(ro);
+    const n=Math.floor(R(6,9));
+    for(let k=0;k<n;k++){ const pv=new THREE.Group(); pv.rotation.y=k/n*6.28; ro.add(pv);
+      const b=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),bulb); b.scale.set(.055,.085,.05); b.position.set(0,.06,.08); pv.add(b);
+      const st=new THREE.Mesh(new THREE.CylinderGeometry(.012,.016,.16,5),bulb); st.position.set(0,.19,.11); st.rotation.x=.25; pv.add(st);
+      const lf=new THREE.Mesh(new THREE.CircleGeometry(.12,16),leaf); lf.scale.y=1.15; lf.position.set(0,.33,.15); lf.rotation.x=-.35; pv.add(lf);
+    }
+    if(r%2===0){ const s=new THREE.Mesh(new THREE.CylinderGeometry(.012,.015,.5,5),bulb); s.position.y=.3; ro.add(s);
+      for(let k=0;k<9;k++){ const f=new THREE.Mesh(new THREE.SphereGeometry(.04,8,6),flw); f.scale.set(1.3,.6,1.3); f.position.set(R(-.07,.07),.5+k*.028,R(-.07,.07)); ro.add(f);
+        if(k%3===0){ const e=new THREE.Mesh(new THREE.SphereGeometry(.012,6,4),eye); e.position.copy(f.position).add(new V3(0,.02,0)); ro.add(e);} } }
+    for(let k=0;k<16;k++){ const L=R(.35,.7); const rr=new THREE.Mesh(new THREE.CylinderGeometry(.005,.003,L,3),rootM);
+      rr.position.set(R(-.08,.08),-L/2+.02,R(-.08,.08)); rr.rotation.set(R(-.25,.25),0,R(-.25,.25)); ro.add(rr); }
+  }
+  floaters.push({g:G, base:c.clone(), ph:0});
+  anchors.hyacinth={c, above:l=>l+1.25, below:l=>l-.75};
+}
+// 大萍
+function buildLettuce(){
+  const c=polar(-74,5.4); const G=new THREE.Group(); G.position.set(c.x,0,c.z); G.scale.setScalar(1.6); scene.add(G);
+  const lf=mat(0xa6c97c,{roughness:1}), rootM=mat(0xe7e2d2), stol=mat(0x8aa860);
+  const pts=[];
+  for(let r=0;r<8;r++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*1.1, x=Math.cos(a)*d, z=Math.sin(a)*d, sc=r<5?1:R(.45,.65);
+    const ro=new THREE.Group(); ro.position.set(x,0,z); ro.scale.setScalar(sc); G.add(ro); pts.push(new V3(x,0.005,z));
+    for(let k=0;k<9;k++){ const pv=new THREE.Group(); pv.rotation.y=k/9*6.28+R(-.1,.1); ro.add(pv);
+      const g=new THREE.SphereGeometry(1,12,6); g.scale(.075,.028,.15); g.translate(0,0,.13);
+      const m=new THREE.Mesh(g,lf); m.rotation.x=-R(.35,.6); m.position.y=.03; pv.add(m); }
+    for(let k=0;k<14;k++){ const L=R(.18,.4); const rr=new THREE.Mesh(new THREE.CylinderGeometry(.004,.002,L,3),rootM);
+      rr.position.set(R(-.05,.05),-L/2,R(-.05,.05)); rr.rotation.set(R(-.3,.3),0,R(-.3,.3)); ro.add(rr); }
+  }
+  for(let i=1;i<pts.length;i++){ const a=pts[i], b=pts[i-1]; const len=a.distanceTo(b); if(len>1.2) continue;
+    const m=new THREE.Mesh(new THREE.CylinderGeometry(.006,.006,len,4),stol); m.position.copy(a).lerp(b,.5); m.lookAt(b); m.rotateX(Math.PI/2); G.add(m); }
+  floaters.push({g:G, base:c.clone(), ph:1.7});
+  anchors.lettuce={c, above:l=>l+.6, below:l=>l-.45};
+}
+// 浮萍
+function buildDuckweed(){
+  const c=polar(-106,5.0); const G=new THREE.Group(); G.position.set(c.x,0,c.z); scene.add(G);
+  const n=1300, geo=new THREE.CircleGeometry(.035,8); geo.rotateX(-Math.PI/2);
+  const im=new THREE.InstancedMesh(geo, mat(0x7cc242,{side:DS,roughness:.6}), n);
+  const d=new THREE.Object3D(), roots=[];
+  for(let i=0;i<n;i++){ const a=R(0,6.28), rr=Math.pow(rnd(),.7)*2.3, x=Math.cos(a)*rr, z=Math.sin(a)*rr*.8;
+    d.position.set(x,.012,z); d.rotation.set(0,R(0,6.28),0); d.scale.set(R(.9,1.5),1,R(.7,1.1)); d.updateMatrix(); im.setMatrixAt(i,d.matrix);
+    if(i%3===0){ roots.push(x,0,z, x+R(-.01,.01),-R(.1,.18),z+R(-.01,.01)); } }
+  G.add(im);
+  const lg=new THREE.BufferGeometry(); lg.setAttribute('position',new THREE.Float32BufferAttribute(roots,3));
+  G.add(new THREE.LineSegments(lg,new THREE.LineBasicMaterial({color:0xd9ecd0})));
+  floaters.push({g:G, base:c.clone(), ph:3.1, amp:.05});
+  anchors.duckweed={c, above:l=>l+.15, below:l=>l-.3};
+}
+// 水蘊草
+function buildHydrilla(){
+  const c=polar(-142,3.9); const stemM=mat(0x4d8a3a), leafM=mat(0x3f8f3a,{side:DS,roughness:.7});
+  const leafGeo=new THREE.PlaneGeometry(.022,.11); leafGeo.translate(0,.055,0);
+  for(let i=0;i<16;i++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*1.05, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d, by=bottomY(x,z), H=R(1.5,2.1);
+    const outer=new THREE.Group(); outer.position.set(x,by,z); outer.rotation.y=R(0,6.28); scene.add(outer);
+    const piv=new THREE.Group(); outer.add(piv);
+    const s=new THREE.Mesh(new THREE.CylinderGeometry(.01,.013,H,4),stemM); s.position.y=H/2; piv.add(s);
+    const nodes=Math.floor(H/.075), per=5, im=new THREE.InstancedMesh(leafGeo,leafM,nodes*per), dm=new THREE.Object3D();
+    let k=0; for(let nd=0;nd<nodes;nd++){ const y=.1+nd*.075; const sc=nd>nodes-5?.6+(nodes-nd)*.08:1;
+      for(let j=0;j<per;j++){ dm.position.set(0,y,0); dm.rotation.set(0,j/per*6.28+nd*.6,0); dm.rotateZ(-1.0); dm.scale.setScalar(sc); dm.updateMatrix(); im.setMatrixAt(k++,dm.matrix);} }
+    piv.add(im);
+    swayers.push({piv, H, by, ph:R(0,6.28), amp:R(.04,.09)});
+  }
+  anchors.hydrilla={c, above:l=>l+.05, below:()=>-1.5};
+}
+// 苦草
+function buildEelgrass(){
+  const c=polar(140,3.9); const m=mat(0x5d9c3c,{side:DS,roughness:.7}), m2=mat(0x4c8a33,{side:DS,roughness:.7});
+  for(let i=0;i<34;i++){
+    const a=R(0,6.28), d=Math.sqrt(rnd())*1.0, x=c.x+Math.cos(a)*d, z=c.z+Math.sin(a)*d, by=bottomY(x,z), L=R(1.4,2.1);
+    const g=new THREE.PlaneGeometry(.055,L,1,12); g.translate(0,L/2,0);
+    const outer=new THREE.Group(); outer.position.set(x,by,z); outer.rotation.y=R(0,6.28); scene.add(outer);
+    const piv=new THREE.Group(); outer.add(piv);
+    const mesh=new THREE.Mesh(g,i%2?m:m2); piv.add(mesh);
+    ribbons.push({g, base:Float32Array.from(g.attributes.position.array), L, ph:R(0,6.28)});
+    swayers.push({piv, H:L, by, ph:R(0,6.28), amp:.02});
+  }
+  anchors.eelgrass={c, above:l=>l+.05, below:()=>-1.6};
+}
+// 小魚
+const fishes=[];
+function buildFish(){
+  const cols=[0xe0833a,0xd9d4c8,0xe0833a,0x9aa7a0];
+  for(let i=0;i<5;i++){ const f=new THREE.Group();
+    const b=new THREE.Mesh(new THREE.SphereGeometry(1,12,8),mat(cols[i%4],{roughness:.4})); b.scale.set(.05,.07,.2); f.add(b);
+    const t=new THREE.Mesh(new THREE.ConeGeometry(.06,.1,4),mat(cols[i%4])); t.rotation.x=-Math.PI/2; t.position.z=.23; t.scale.x=.3; f.add(t);
+    scene.add(f); fishes.push({f, r:R(3.5,8), y:R(-1.9,-.9), sp:R(.12,.25)*(i%2?1:-1), ph:R(0,6.28)}); }
+}
+buildLily(); buildNuphar(); buildLotus(); buildCattail(); buildHyacinth(); buildLettuce(); buildDuckweed(); buildHydrilla(); buildEelgrass(); buildFish();
+
+function applyLevel(){
+  water.position.y=W.level;
+  surfaceObjs.forEach(s=>s.o.position.y=W.level+s.lift);
+  floaters.forEach(f=>f.g.position.y=W.level);
+  petioles.forEach(updatePetiole);
+  motes.position.y=W.level;
+}
+applyLevel();
+
+/* ---------------- 視角控制 ---------------- */
+let lon=0, lat=-12, vLon=0, vLat=0, fov=70, fly=null, camY=EYE_ABOVE, camTarget=EYE_ABOVE, spin=false, idleT=0;
+const pointers=new Map(); let lastPinch=0, dragged=false;
+const hint=document.getElementById('hint');
+function hideHint(){ hint.classList.add('gone'); }
+setTimeout(hideHint, 9000);
+
+stage.addEventListener('pointerdown',e=>{ stage.setPointerCapture(e.pointerId); pointers.set(e.pointerId,{x:e.clientX,y:e.clientY}); stage.classList.add('drag'); fly=null; vLon=vLat=0; dragged=false; });
+stage.addEventListener('pointermove',e=>{
+  const p=pointers.get(e.pointerId); if(!p) return;
+  if(pointers.size===2){
+    p.x=e.clientX; p.y=e.clientY; const [a,b]=[...pointers.values()]; const d=Math.hypot(a.x-b.x,a.y-b.y);
+    if(lastPinch) setFov(fov-(d-lastPinch)*.12); lastPinch=d; return;
+  }
+  const dx=e.clientX-p.x, dy=e.clientY-p.y; p.x=e.clientX; p.y=e.clientY;
+  const k=fov/70*.16; lon-=dx*k; lat+=dy*k; vLon=-dx*k; vLat=dy*k; clampLat();
+  if(Math.abs(dx)+Math.abs(dy)>2){ dragged=true; hideHint(); } idleT=0;
+});
+function endPtr(e){ pointers.delete(e.pointerId); lastPinch=0; if(!pointers.size) stage.classList.remove('drag'); }
+stage.addEventListener('pointerup',endPtr); stage.addEventListener('pointercancel',endPtr);
+stage.addEventListener('wheel',e=>{ e.preventDefault(); setFov(fov+e.deltaY*.04); },{passive:false});
+window.addEventListener('keydown',e=>{
+  if(e.target.tagName==='INPUT') return;
+  const m={ArrowLeft:[-4,0],ArrowRight:[4,0],ArrowUp:[0,3],ArrowDown:[0,-3]}[e.key];
+  if(m){ lon+=m[0]; lat+=m[1]; clampLat(); fly=null; e.preventDefault(); }
+});
+function clampLat(){ lat=Math.max(-78,Math.min(78,lat)); }
+function setFov(f){ fov=Math.max(32,Math.min(82,f)); camera.fov=fov; camera.updateProjectionMatrix(); }
+
+function anchorPos(id){ const a=anchors[id]; return new V3(a.c.x, W.under? a.below(W.level) : a.above(W.level), a.c.z); }
+function flyTo(id){
+  const p=anchorPos(id), eye=new V3(CAM_X,camTarget,CAM_Z), d=p.clone().sub(eye);
+  let tl=Math.atan2(d.x,-d.z)*180/Math.PI, tt=Math.atan2(d.y,Math.hypot(d.x,d.z))*180/Math.PI - (window.innerWidth<760? 8:0);
+  let dl=((tl-lon)%360+540)%360-180;
+  fly={l0:lon,l1:lon+dl,t0:lat,t1:Math.max(-70,Math.min(70,tt)),s:performance.now(),dur:900};
+}
+function setView(under){
+  W.under=under; camTarget = under ? W.level-1.25 : EYE_ABOVE;
+  document.getElementById('vAbove').setAttribute('aria-pressed',String(!under));
+  document.getElementById('vBelow').setAttribute('aria-pressed',String(under));
+  if(under && lat<-20) lat=-5;
+}
+document.getElementById('vAbove').onclick=()=>setView(false);
+document.getElementById('vBelow').onclick=()=>setView(true);
+const spinBtn=document.getElementById('spin');
+spinBtn.onclick=()=>{ spin=!spin; spinBtn.setAttribute('aria-pressed',String(spin)); };
+
+const lvl=document.getElementById('lvl'), lvlout=document.getElementById('lvlout');
+lvl.addEventListener('input',()=>{
+  W.level=lvl.value/100; applyLevel();
+  const cm=Math.round(W.level*100);
+  lvlout.textContent = cm===0 ? '平常' : (cm>0 ? '升高 '+cm+' 公分' : '降低 '+(-cm)+' 公分');
+  if(W.under) camTarget=W.level-1.25;
+});
+
+/* ---------------- 圖例 ---------------- */
+function schematic(t){
+  const c=TYPES[t].color;
+  let plant='';
+  if(t==='sub') plant=`<path d="M40 50 C37 42 43 36 40 27" stroke="${c}" stroke-width="2" fill="none"/><path d="M40 44 l-6 -3 M40 44 l6 -3 M40 38 l-6 -3 M40 38 l6 -3 M40 32 l-5 -3 M40 32 l5 -3" stroke="${c}" stroke-width="1.6"/><path d="M52 50 C54 42 50 36 53 30" stroke="${c}" stroke-width="2.4" fill="none"/>`;
+  if(t==='eme') plant=`<path d="M42 50 L42 8" stroke="${c}" stroke-width="2"/><path d="M29 9 Q42 17 55 9" stroke="${c}" stroke-width="2.4" fill="none"/><path d="M52 50 L54 14" stroke="${c}" stroke-width="1.8"/><ellipse cx="54" cy="11" rx="3.5" ry="5" fill="${c}"/>`;
+  if(t==='flo') plant=`<path d="M38 50 C31 40 48 32 42 21" stroke="${c}" stroke-width="2" fill="none"/><ellipse cx="42" cy="20.5" rx="13" ry="2.2" fill="${c}"/><path d="M56 50 C60 38 52 30 58 17" stroke="${c}" stroke-width="1.6" fill="none"/><circle cx="58" cy="15" r="3.4" fill="${c}"/>`;
+  if(t==='fre') plant=`<path d="M34 20 Q40 11 44 20 Q48 11 54 20 Z" fill="${c}"/><path d="M38 21 l-2 13 M42 21 l0 15 M46 21 l1 14 M50 21 l3 12" stroke="${c}" stroke-width="1.2"/><ellipse cx="22" cy="20.3" rx="5" ry="1.4" fill="${c}"/><path d="M22 21 l0 5" stroke="${c}" stroke-width="1"/>`;
+  return `<svg viewBox="0 0 88 60" role="img" aria-label="${TYPES[t].name}示意圖"><rect width="88" height="20" fill="#F7FAF4"/><rect y="20" width="88" height="28" fill="#D5EAEC"/><rect y="48" width="88" height="12" fill="#8A6C4A"/><path d="M0 20 H88" stroke="#6FA8B8" stroke-width="1.2"/>${plant}<text x="3" y="58" font-size="6" fill="#F4F6EE">泥土</text><text x="3" y="27" font-size="6" fill="#4F7F8A">水面</text></svg>`;
+}
+const typesEl=document.getElementById('types');
+function renderLegend(){
+  typesEl.innerHTML = TYPE_ORDER.map(t=>{
+    const T=TYPES[t];
+    const chips = mode==='explore'
+      ? PLANTS.filter(p=>p.type===t).map(p=>`<button class="chip" data-go="${p.id}">${p.name}</button>`).join('')
+      : (()=>{ const got=PLANTS.filter(p=>p.type===t && solved[p.id]); return got.length? got.map(p=>`<button class="chip" data-go="${p.id}">${p.name}</button>`).join('') : '<span class="locked">完成挑戰後出現</span>'; })();
+    return `<div class="type" style="--c:${T.color}">${schematic(t)}<div><h3>${T.name}</h3><p>${T.line}</p><div class="chips">${chips}</div></div></div>`;
+  }).join('');
+}
+typesEl.addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) openPlant(b.dataset.go, true); });
+
+/* ---------------- 圖釘 ---------------- */
+const pinsEl=document.getElementById('pins'); const pinEls={};
+let mode='explore', solved={}, tries={}, firstTry=0, mystery={};
+function buildPins(){
+  pinsEl.innerHTML='';
+  PLANTS.forEach(p=>{
+    const b=document.createElement('button'); b.className='pin'; b.dataset.id=p.id;
+    b.innerHTML='<span class="tag"></span><span class="stick"></span><span class="dot"></span>';
+    b.addEventListener('click',()=>openPlant(p.id,false));
+    pinsEl.appendChild(b); pinEls[p.id]=b;
+  });
+  refreshPins();
+}
+function refreshPins(){
+  PLANTS.forEach(p=>{
+    const b=pinEls[p.id], tag=b.firstChild;
+    const known = mode==='explore' || solved[p.id];
+    b.style.setProperty('--c', known ? TYPES[p.type].color : '#3A4A42');
+    tag.innerHTML = known ? `${p.name}<small>${TYPES[p.type].name}</small>` : `神秘植物 ${mystery[p.id]}`;
+    b.setAttribute('aria-label', known ? `${p.name}，${TYPES[p.type].name}水生植物` : `神秘植物 ${mystery[p.id]}`);
+  });
+}
+function updatePins(){
+  const w=stage.clientWidth, h=stage.clientHeight;
+  PLANTS.forEach(p=>{
+    const v=anchorPos(p.id).project(camera), el=pinEls[p.id];
+    if(v.z>1 || Math.abs(v.x)>1.15 || Math.abs(v.y)>1.15){ el.style.display='none'; return; }
+    el.style.display='';
+    el.style.transform=`translate(${(v.x+1)/2*w}px,${(1-v.y)/2*h}px) translate(-50%,-100%)`;
+  });
+}
+
+/* ---------------- 卡片 ---------------- */
+const card=document.getElementById('card'); let current=null;
+function closeCard(){ card.hidden=true; if(current) pinEls[current].classList.remove('active'); current=null; }
+function openPlant(id, fly){
+  if(current) pinEls[current].classList.remove('active');
+  current=id; pinEls[id].classList.add('active');
+  if(fly) flyTo(id);
+  if(mode==='challenge' && !solved[id]) renderQuiz(id); else renderInfo(id);
+  card.hidden=false; card.scrollTop=0;
+}
+function viewBtn(){ return W.under ? `<button class="btn" data-act="above">回到水面上</button>` : `<button class="btn primary" data-act="below">潛入水下看看根</button>`; }
+function renderInfo(id){
+  const p=byId[id], T=TYPES[p.type];
+  card.style.setProperty('--c',T.color);
+  card.innerHTML=`<div class="head"><span class="kind">${T.name}水生植物</span><h2>${p.name}</h2><button class="close" aria-label="關閉">×</button></div>
+  <div class="body">
+    <div><h4>它的身體長在哪裡？</h4>
+    <dl class="where"><dt>根</dt><dd>${p.root}</dd><dt>葉</dt><dd>${p.leaf}</dd><dt>花</dt><dd>${p.flower}</dd></dl></div>
+    <div><h4>適應水中生活的特徵</h4><ul>${p.feat.map(f=>`<li>${f}</li>`).join('')}</ul></div>
+    <div class="task"><b>觀察任務：</b>${p.task}</div>
+    <div class="actions">${viewBtn()}${p.act==='level'?'<button class="btn" data-act="level">幫我調低水位</button>':''}</div>
+  </div>`;
+}
+function renderQuiz(id, fb){
+  const p=byId[id];
+  card.style.setProperty('--c','#3A4A42');
+  const used=tries[id]||[];
+  card.innerHTML=`<div class="head"><span class="kind">分類挑戰</span><h2>神秘植物 ${mystery[id]}</h2><button class="close" aria-label="關閉">×</button></div>
+  <div class="body">
+    <p class="q">這是哪一類水生植物？<br>先觀察：<b>根</b>長在哪裡？<b>葉</b>在水面上、水面，還是水面下？</p>
+    <div class="opts">${TYPE_ORDER.map(t=>`<button class="opt" style="--c:${TYPES[t].color}" data-ans="${t}" ${used.includes(t)?'disabled':''}>${TYPES[t].name}</button>`).join('')}</div>
+    ${fb||''}
+    <div class="actions">${viewBtn()}</div>
+  </div>`;
+}
+function answer(id,t){
+  const p=byId[id]; tries[id]=tries[id]||[];
+  if(t===p.type){
+    const first=tries[id].length===0; if(first) firstTry++;
+    solved[id]=true; refreshPins(); renderLegend(); updateScore();
+    const T=TYPES[p.type];
+    card.style.setProperty('--c',T.color);
+    card.innerHTML=`<div class="head"><span class="kind">${T.name}水生植物</span><h2>答對了！這是${p.name}</h2><button class="close" aria-label="關閉">×</button></div>
+    <div class="body"><div class="fb yes">${first?'一次就答對！':''}${p.name}的根${p.root.replace(/^根和|^根/,'')}；葉${p.leaf.replace(/^葉/,'')}。所以它是<b>${T.name}</b>水生植物。</div>
+    <dl class="where"><dt>根</dt><dd>${p.root}</dd><dt>葉</dt><dd>${p.leaf}</dd><dt>花</dt><dd>${p.flower}</dd></dl>
+    <div><h4>適應水中生活的特徵</h4><ul>${p.feat.map(f=>`<li>${f}</li>`).join('')}</ul></div>
+    <div class="actions">${nextBtn()}</div></div>`;
+  } else {
+    tries[id].push(t);
+    const C=TYPES[t];
+    renderQuiz(id, `<div class="fb no">不是喔！如果是<b>${C.name}</b>，它應該「${C.body}」，而且根${C.root}。<br>再仔細看看，${W.under?'它的葉子在哪裡？':'也可以潛入水下看看它的根。'}</div>`);
+  }
+}
+function nextBtn(){
+  const left=PLANTS.filter(p=>!solved[p.id]);
+  if(!left.length) return `<button class="btn primary" data-act="done">看挑戰成績</button>`;
+  return `<button class="btn primary" data-act="next">下一株神秘植物</button>`;
+}
+function renderDone(){
+  card.style.setProperty('--c','#2F6B5E');
+  card.innerHTML=`<div class="head"><span class="kind">挑戰完成</span><h2>9 株植物全部分類完成！</h2><button class="close" aria-label="關閉">×</button></div>
+  <div class="body"><p class="q">一次就答對 <b>${firstTry}</b> 題（共 9 題）。</p>
+  <table class="recap">${TYPE_ORDER.map(t=>`<tr><td style="color:${TYPES[t].color};font-weight:700">${TYPES[t].name}</td><td>${PLANTS.filter(p=>p.type===t).map(p=>p.name).join('、')}</td></tr>`).join('')}</table>
+  <div class="task"><b>想一想：</b>漂浮性和浮葉性的葉子都在水面上，要怎麼分辨它們？（提示：看看根！）</div>
+  <div class="actions"><button class="btn primary" data-act="reset">再挑戰一次</button><button class="btn" data-act="explore">回到探索模式</button></div></div>`;
+}
+card.addEventListener('click',e=>{
+  if(e.target.closest('.close')) return closeCard();
+  const o=e.target.closest('[data-ans]'); if(o && current) return answer(current,o.dataset.ans);
+  const a=e.target.closest('[data-act]'); if(!a) return;
+  const act=a.dataset.act;
+  if(act==='below'||act==='above'){ setView(act==='below'); if(current){ const id=current; setTimeout(()=>flyTo(id),150);
+      if(mode==='challenge'&&!solved[id]) renderQuiz(id); else renderInfo(id);} }
+  if(act==='level'){ lvl.value=-80; lvl.dispatchEvent(new Event('input')); setView(true); setTimeout(()=>flyTo('lily'),150); renderInfo('lily'); }
+  if(act==='next'){ const left=PLANTS.filter(p=>!solved[p.id]).sort((x,y)=>mystery[x.id]-mystery[y.id]); openPlant(left[0].id,true); }
+  if(act==='done') renderDone();
+  if(act==='reset') startChallenge();
+  if(act==='explore') setMode('explore');
+});
+
+/* ---------------- 模式 ---------------- */
+const scoreEl=document.getElementById('score');
+function updateScore(){ scoreEl.textContent=`已分類 ${Object.keys(solved).length} / 9`; }
+function startChallenge(){
+  solved={}; tries={}; firstTry=0;
+  const order=PLANTS.map(p=>p.id).sort(()=>Math.random()-.5); order.forEach((id,i)=>mystery[id]=i+1);
+  refreshPins(); renderLegend(); updateScore(); closeCard();
+  card.style.setProperty('--c','#3A4A42');
+  card.innerHTML=`<div class="head"><span class="kind">分類挑戰</span><h2>池塘裡藏著 9 株神秘植物</h2><button class="close" aria-label="關閉">×</button></div>
+  <div class="body"><p class="q">點選畫面上的「神秘植物」圖釘，判斷它是哪一類水生植物。</p>
+  <div class="task"><b>判斷訣竅：</b>先看<b>根</b>有沒有長在泥土裡，再看<b>葉</b>是挺出水面、平貼水面，還是沉在水面下。記得潛入水下觀察！</div>
+  <div class="actions"><button class="btn primary" data-act="next">從神秘植物 1 開始</button></div></div>`;
+  card.hidden=false;
+}
+function setMode(m){
+  mode=m;
+  document.getElementById('mExplore').setAttribute('aria-pressed',String(m==='explore'));
+  document.getElementById('mChallenge').setAttribute('aria-pressed',String(m==='challenge'));
+  scoreEl.hidden = m!=='challenge';
+  if(m==='challenge') startChallenge(); else { closeCard(); refreshPins(); renderLegend(); }
+}
+document.getElementById('mExplore').onclick=()=>{ if(mode!=='explore') setMode('explore'); };
+document.getElementById('mChallenge').onclick=()=>{ if(mode!=='challenge') setMode('challenge'); };
+
+PLANTS.forEach((p,i)=>mystery[p.id]=i+1);
+buildPins(); renderLegend();
+if(window.innerWidth<760) document.getElementById('legend').open=false;
+
+/* ---------------- 動畫 ---------------- */
+const clock=new THREE.Clock(); let wasUnder=null;
+const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function ease(t){ return t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2; }
+function frame(){
+  const raw=clock.getDelta(), dt=Math.min(raw,.05), t=clock.elapsedTime;
+  // 視角
+  if(fly){ const k=Math.min(1,(performance.now()-fly.s)/fly.dur), e=ease(k); lon=fly.l0+(fly.l1-fly.l0)*e; lat=fly.t0+(fly.t1-fly.t0)*e; if(k>=1) fly=null; }
+  else if(!pointers.size){ lon+=vLon; lat+=vLat; vLon*=.9; vLat*=.9; clampLat(); if(spin) lon+=dt*4; }
+  camY += (camTarget-camY)*(1-Math.exp(-Math.min(raw,.5)*2.6)); if(Math.abs(camTarget-camY)<.002) camY=camTarget;
+  camera.position.set(CAM_X,camY,CAM_Z);
+  const la=lat*Math.PI/180, lo=lon*Math.PI/180;
+  camera.lookAt(CAM_X+Math.sin(lo)*Math.cos(la), camY+Math.sin(la), CAM_Z-Math.cos(lo)*Math.cos(la));
+
+  // 水上／水下
+  const under = camY < W.level;
+  if(under!==wasUnder){
+    wasUnder=under;
+    if(under){ scene.fog.color.copy(UNDERFOG); scene.fog.near=1; scene.fog.far=19; renderer.setClearColor(UNDERFOG); sky.visible=false;
+      waterMat.color.set(0x9ad8cf); waterMat.opacity=.78; motes.visible=true; }
+    else { scene.fog.color.copy(SKYFOG); scene.fog.near=45; scene.fog.far=260; renderer.setClearColor(SKYFOG); sky.visible=true;
+      waterMat.color.set(0x3f7f76); waterMat.opacity=.6; motes.visible=false; }
+    document.getElementById('veil').classList.toggle('on',under);
+  }
+
+  if(!reduce){
+    waterTex.offset.set(t*.004, t*.0025);
+    swayers.forEach(s=>{ const avail=W.level-.22-s.by; const bend=s.H>avail? Math.acos(Math.max(.12,Math.min(1,avail/s.H))) : 0;
+      s.piv.rotation.z = bend + Math.sin(t*.8+s.ph)*s.amp; });
+    ribbons.forEach(r=>{ const a=r.g.attributes.position, b=r.base;
+      for(let i=0;i<a.count;i++){ const y=b[i*3+1], k=y/r.L; a.array[i*3+2]=b[i*3+2]+Math.sin(t*1.1+r.ph+y*1.6)*.16*k*k; }
+      a.needsUpdate=true; });
+    floaters.forEach(f=>{ const amp=f.amp||.12; f.g.position.x=f.base.x+Math.sin(t*.25+f.ph)*amp; f.g.position.z=f.base.z+Math.cos(t*.2+f.ph)*amp; f.g.rotation.y=Math.sin(t*.1+f.ph)*.08; });
+    fishes.forEach(F=>{ const a=F.ph+t*F.sp; const y=Math.min(F.y+W.level, W.level-.3);
+      F.f.position.set(Math.cos(a)*F.r, y+Math.sin(t*1.3+F.ph)*.05, Math.sin(a)*F.r-2);
+      F.f.rotation.y = -a + (F.sp>0? Math.PI : 0); });
+  } else {
+    swayers.forEach(s=>{ const avail=W.level-.22-s.by; s.piv.rotation.z = s.H>avail? Math.acos(Math.max(.12,Math.min(1,avail/s.H))) : 0; });
+  }
+
+  renderer.render(scene,camera);
+  updatePins();
+  requestAnimationFrame(frame);
+}
+window.addEventListener('resize',()=>{ const w=stage.clientWidth,h=stage.clientHeight; renderer.setSize(w,h); camera.aspect=w/h; camera.updateProjectionMatrix(); });
+requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
